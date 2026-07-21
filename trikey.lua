@@ -29,9 +29,48 @@ function M.proc.func(key, env)
 			env.engine:commit_text(commit_text)
 			context:clear()
 		end
+	elseif back_seg:has_tag("punct") and len == 1 and not key:release() then
+		if input ~= "" and env.initials:find(input:sub(#input,#input),1,true) then
+			if char and env.alphabet:find(char,1,true) then
+				context:clear()
+				context:push_input(input..char)
+				return 1
+			end
+		end
 	end
 
 	return 2
+end
+
+M.seg = {}
+
+function M.seg.init(env)
+	env.alphabet = env.engine.schema.config:get_string("speller/alphabet") or ""
+end
+
+function M.seg.fini(env)
+end
+
+function M.seg.func(segmentation, env)
+	local input = segmentation.input
+
+	if not input:match("^[".. env.alphabet .."]+$") then
+		return true
+	end
+
+	if #input % 3 == 1 and input:match("%p$") then
+		if #input > 1 then
+			local abc_seg = Segment(0, #input - 1)
+			abc_seg.tags = Set({ "abc" })
+			segmentation:add_segment(abc_seg)
+		end
+		local seg = Segment(#input - 1, #input)
+		seg.tags = Set({ "punct" })
+		segmentation:add_segment(seg)
+		return false
+	end
+
+	return true
 end
 
 return M
